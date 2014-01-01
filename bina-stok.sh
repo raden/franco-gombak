@@ -16,6 +16,6 @@ export LOCALVERSION="-gombak-r200"
 #make cyanogen_mako_defconfig
 #make menuconfig
 #echo "Begin compile..."
-#make -j8
+make -j4
 
 
