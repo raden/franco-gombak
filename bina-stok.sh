@@ -13,8 +13,8 @@ export LOCALVERSION="-gombak-r200"
 
 #echo "Copy backup config..."
 #cp najmi-mako-config .config
-make cyanogen_mako_defconfig
-$make menuconfig
+#make cyanogen_mako_defconfig
+#make menuconfig
 #echo "Begin compile..."
 #make -j8
 
