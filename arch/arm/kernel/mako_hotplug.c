@@ -27,7 +27,12 @@
 #include <linux/input.h>
 #include <linux/jiffies.h>
 
-#include <linux/earlysuspend.h>
+#define DEFAULT_FIRST_LEVEL 60
+#define DEFAULT_SUSPEND_FREQ 1512000
+#define DEFAULT_CORES_ON_TOUCH 2
+#define HIGH_LOAD_COUNTER 20
+#define TIMER HZ
+#define CPUFREQ_UNPLUG_LIMIT 960000
 
 #define MAKO_HOTPLUG "mako_hotplug"
 
@@ -151,14 +156,7 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 				 * CPUFREQ_UNPLUG_LIMIT. Else fill the counter so that this cpu
 				 * stays online at least for an 500ms
 				 */
-				cpufreq_get_policy(&policy, cpu_nr);
-
-				freq_buf = policy.min;
-
-				if (policy.min > t->cpufreq_unplug_limit)
-					freq_buf = t->cpufreq_unplug_limit;
-
-				if (policy.cur > freq_buf)
+				if (cpufreq_get(cpu_nr) >= CPUFREQ_UNPLUG_LIMIT)
 					stats.counter[cpu] = 15;
 				else
 					cpu_smash(cpu_nr);
@@ -252,11 +250,10 @@ static int __devinit mako_hotplug_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	t->load_threshold = DEFAULT_FIRST_LEVEL;
-	t->high_load_counter = DEFAULT_HIGH_LOAD_COUNTER;
-	t->cpufreq_unplug_limit = DEFAULT_CPUFREQ_UNPLUG_LIMIT;
-	t->min_time_cpu_online = DEFAULT_MIN_TIME_CPU_ONLINE;
-	t->timer = DEFAULT_TIMER;
+	pm_wq = alloc_workqueue("pm_workqueue", WQ_HIGHPRI, 1);
+    
+    if (!pm_wq)
+        return -ENOMEM;
 
 	stats.timestamp[0] = jiffies;
 	stats.timestamp[1] = jiffies;
