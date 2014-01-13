@@ -126,10 +126,19 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	unsigned int cur_load;
 	unsigned int freq_buf;
 	struct cpufreq_policy policy;
-	struct hotplug_tunables *t = &tunables;
 
-	if (unlikely(num_online_cpus() == 1))
-		goto reschedule;
+	if (_ts->ts_data.curr_data[0].state == ABS_PRESS)
+	{
+		for (i = num_online_cpus(); i < stats.cores_on_touch; i++)
+		{
+			if (cpu_is_offline(i))
+			{
+				cpu_up(i);
+				stats.timestamp[i-2] = ktime_to_ms(ktime_get());
+			}
+		}
+		goto re_queue;
+	}
 
     for_each_online_cpu(cpu) 
     {
@@ -156,7 +165,14 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 				 * CPUFREQ_UNPLUG_LIMIT. Else fill the counter so that this cpu
 				 * stays online at least for an 500ms
 				 */
-				if (cpufreq_get(cpu_nr) >= CPUFREQ_UNPLUG_LIMIT)
+				cpufreq_get_policy(&policy, cpu_nr);
+
+				if (policy.min > CPUFREQ_UNPLUG_LIMIT)
+					freq_buf = policy.min;
+				else
+					freq_buf = CPUFREQ_UNPLUG_LIMIT;
+
+				if (policy.cur > freq_buf)
 					stats.counter[cpu] = 15;
 				else
 					cpu_smash(cpu_nr);
