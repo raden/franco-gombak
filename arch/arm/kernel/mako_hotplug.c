@@ -27,26 +27,23 @@
 #include <linux/input.h>
 #include <linux/jiffies.h>
 
-#define DEFAULT_FIRST_LEVEL 60
-#define DEFAULT_SUSPEND_FREQ 1512000
-#define DEFAULT_CORES_ON_TOUCH 2
-#define HIGH_LOAD_COUNTER 20
-#define TIMER HZ
-#define CPUFREQ_UNPLUG_LIMIT 960000
+#include <linux/earlysuspend.h>
 
 #define MAKO_HOTPLUG "mako_hotplug"
 
 #define DEFAULT_FIRST_LEVEL 60
-#define DEFAULT_HIGH_LOAD_COUNTER 20
-#define DEFAULT_CPUFREQ_UNPLUG_LIMIT 1000000
-#define DEFAULT_MIN_TIME_CPU_ONLINE HZ
-#define DEFAULT_TIMER HZ
+#define HIGH_LOAD_COUNTER 20
+#define CPUFREQ_UNPLUG_LIMIT 1000000
+#define MIN_TIME_CPU_ONLINE HZ
+#define TIMER HZ
 
 static struct cpu_stats
 {
+    unsigned int default_first_level;
     unsigned int counter[2];
 	unsigned long timestamp[2];
 } stats = {
+	.default_first_level = DEFAULT_FIRST_LEVEL,
     .counter = {0},
 };
 
@@ -127,18 +124,8 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	unsigned int freq_buf;
 	struct cpufreq_policy policy;
 
-	if (_ts->ts_data.curr_data[0].state == ABS_PRESS)
-	{
-		for (i = num_online_cpus(); i < stats.cores_on_touch; i++)
-		{
-			if (cpu_is_offline(i))
-			{
-				cpu_up(i);
-				stats.timestamp[i-2] = ktime_to_ms(ktime_get());
-			}
-		}
-		goto re_queue;
-	}
+	if (unlikely(num_online_cpus() == 1))
+		goto reschedule;
 
     for_each_online_cpu(cpu) 
     {
@@ -186,7 +173,7 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	}
 
 reschedule:
-    queue_delayed_work_on(0, wq, &decide_hotplug, msecs_to_jiffies(t->timer));
+    queue_delayed_work_on(0, wq, &decide_hotplug, msecs_to_jiffies(TIMER));
 }
 
 static void mako_hotplug_suspend(struct work_struct *work)
@@ -232,7 +219,7 @@ static void mako_hotplug_late_resume(struct early_suspend *handler)
 
 static struct early_suspend early_suspend =
 {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1,
 	.suspend = mako_hotplug_early_suspend,
 	.resume = mako_hotplug_late_resume,
 };
@@ -240,23 +227,18 @@ static struct early_suspend early_suspend =
 /* sysfs functions for external driver */
 void update_first_level(unsigned int level)
 {
-	struct hotplug_tunables *t = &tunables;
-
-    t->load_threshold = level;
+    stats.default_first_level = level;
 }
 
 unsigned int get_first_level()
 {
-	struct hotplug_tunables *t = &tunables;
-
-    return t->load_threshold;
+    return stats.default_first_level;
 }
 /* end sysfs functions from external driver */
 
 static int __devinit mako_hotplug_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct hotplug_tunables *t = &tunables;
 
     wq = alloc_workqueue("mako_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
     
@@ -265,11 +247,6 @@ static int __devinit mako_hotplug_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-
-	pm_wq = alloc_workqueue("pm_workqueue", WQ_HIGHPRI, 1);
-    
-    if (!pm_wq)
-        return -ENOMEM;
 
 	stats.timestamp[0] = jiffies;
 	stats.timestamp[1] = jiffies;
