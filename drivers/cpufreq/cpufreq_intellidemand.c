@@ -483,26 +483,6 @@ show_one(sampling_early_factor, sampling_early_factor);
 show_one(sampling_interim_factor, sampling_interim_factor);
 show_one(enable_boost_cpu, enable_boost_cpu)
 
-static ssize_t show_eco_mode(struct kobject *kobj,
-                                      struct attribute *attr, char *buf)
-{
-        return sprintf(buf, "%u\n", eco_mode_active);
-}
-
-static ssize_t store_eco_mode(struct kobject *kobj, struct attribute *attr,
-                                const char *buf, size_t count)
-{
-	unsigned int input;
-	int ret;
-
-	ret = sscanf(buf, "%u", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	eco_mode_active = input;
-	return count;
-}
-
 static ssize_t show_powersave_bias
 (struct kobject *kobj, struct attribute *attr, char *buf)
 {

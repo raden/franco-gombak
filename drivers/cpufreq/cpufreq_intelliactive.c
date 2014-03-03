@@ -148,6 +148,7 @@ struct cpufreq_governor cpufreq_gov_intelliactive = {
 	.owner = THIS_MODULE,
 };
 
+/**
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 						  cputime64_t *wall)
 {
@@ -183,7 +184,7 @@ static inline cputime64_t get_cpu_idle_time(unsigned int cpu,
 
 	return idle_time;
 }
-
+**/
 static void cpufreq_interactive_timer_resched(
 	struct cpufreq_interactive_cpuinfo *pcpu)
 {
