@@ -9,7 +9,7 @@ export CROSS_COMPILE=/opt/sabermod-gcc/bin/arm-eabi-
 
 export KBUILD_BUILD_USER=najmi
 export KBUILD_BUILD_HOST="ampang"
-export LOCALVERSION="-gombak-r203"
+export LOCALVERSION="-gombak-r203.B"
 
 #echo "Copy backup config..."
 #cp najmi-mako-config .config
