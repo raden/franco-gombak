@@ -153,8 +153,7 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
 
 	return jiffies_to_usecs(idle_time);
 }
-
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
+static inline cputime64_t get_cpu_idle_masa(unsigned int cpu, cputime64_t *wall)
 {
     u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
 
@@ -165,8 +164,7 @@ static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 
     return idle_time;
 }
-
-static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
+static inline cputime64_t get_cpu_iowait_masa(unsigned int cpu, cputime64_t *wall)
 {
     u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
 
@@ -356,7 +354,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
     for_each_online_cpu(j) {
 	struct cpu_dbs_info_s *dbs_info;
 	dbs_info = &per_cpu(od_cpu_dbs_info, j);
-	dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
+	dbs_info->prev_cpu_idle = get_cpu_idle_masa(j,
 						    &dbs_info->prev_cpu_wall);
 	if (dbs_tuners_ins.ignore_nice)
 	    dbs_info->prev_cpu_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -487,13 +485,11 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	unsigned int load, load_freq;
 	int freq_avg;
 	struct cpuidle_device * j_cpuidle_dev = NULL;
-//	struct cpuidle_state * deepidle_state = NULL;
-//	unsigned long long deepidle_time, deepidle_usage;
 
 	j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 
-	cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
-	cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
+	cur_idle_time = get_cpu_idle_masa(j, &cur_wall_time);
+	cur_iowait_time = get_cpu_iowait_masa(j, &cur_wall_time);
 
 	wall_time = (unsigned int) (cur_wall_time - j_dbs_info->prev_cpu_wall);
 	j_dbs_info->prev_cpu_wall = cur_wall_time;
@@ -546,21 +542,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	j_cpuidle_dev = per_cpu(cpuidle_devices, j);
 
-/*
-	if (j_cpuidle_dev)
-	    deepidle_state = &j_cpuidle_dev->states[j_cpuidle_dev->state_count - 1];
-
-	if (deepidle_state) {
-	    deepidle_time = deepidle_state->time;
-	    deepidle_usage = deepidle_state->usage;
-		    
-	    total_idletime += (unsigned long)(deepidle_time - j_dbs_info->prev_idletime);
-	    total_usage += (unsigned long)(deepidle_usage - j_dbs_info->prev_idleusage);
-
-	    j_dbs_info->prev_idletime = deepidle_time;
-	    j_dbs_info->prev_idleusage = deepidle_usage;
-	}
-*/
     }
 
     if (total_usage > 0 && total_idletime / total_usage >= dbs_tuners_ins.target_residency) { 
@@ -686,15 +667,6 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
  */
 static int should_io_be_busy(void)
 {
-#if defined(CONFIG_X86)
-    /*
-     * For Intel, Core 2 (model 15) andl later have an efficient idle.
-     */
-    if (boot_cpu_data.x86_vendor == X86_VENDOR_INTEL &&
-	boot_cpu_data.x86 == 6 &&
-	boot_cpu_data.x86_model >= 15)
-	return 1;
-#endif
     return 0;
 }
 
@@ -721,7 +693,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	    j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 	    j_dbs_info->cur_policy = policy;
 
-	    j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
+	    j_dbs_info->prev_cpu_idle = get_cpu_idle_masa(j,
 							  &j_dbs_info->prev_cpu_wall);
 	    if (dbs_tuners_ins.ignore_nice) {
 		j_dbs_info->prev_cpu_nice =
