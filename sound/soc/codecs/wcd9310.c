@@ -38,6 +38,14 @@
 #include <linux/suspend.h>
 #include "wcd9310.h"
 
+struct sound_control {
+	unsigned int default_headset_val;
+	unsigned int default_headphones_val;
+	struct snd_soc_codec *sound_control_codec;
+};
+
+static struct sound_control soundcontrol;
+
 static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
@@ -8401,6 +8409,48 @@ struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
 		(struct snd_kcontrol_new *)tabla_snd_controls;
 struct snd_soc_codec *fauxsound_codec_ptr;
 EXPORT_SYMBOL(fauxsound_codec_ptr);
+#ifdef CONFIG_SOUND_CONTROL
+void update_headphones_volume_boost(int vol_boost)
+{
+	unsigned int default_val = soundcontrol.default_headphones_val;
+	unsigned int boosted_val = vol_boost != 0 ? 
+									default_val + vol_boost : default_val;
+
+	pr_info("Sound Control: Headphones default value %d\n", default_val);
+	
+	tabla_write(soundcontrol.sound_control_codec, 
+				TABLA_A_CDC_RX1_VOL_CTL_B2_CTL, boosted_val);
+	tabla_write(soundcontrol.sound_control_codec, 
+				TABLA_A_CDC_RX2_VOL_CTL_B2_CTL, boosted_val);
+	
+	pr_info("Sound Control: Boosted Headphones RX1 value %d\n", 
+			tabla_read(soundcontrol.sound_control_codec, 
+						TABLA_A_CDC_RX1_VOL_CTL_B2_CTL));
+	pr_info("Sound Control: Boosted Headphones RX2 value %d\n", 
+			tabla_read(soundcontrol.sound_control_codec, 
+						TABLA_A_CDC_RX2_VOL_CTL_B2_CTL));
+}
+
+void update_headset_volume_boost(int vol_boost)
+{
+	unsigned int default_val = soundcontrol.default_headset_val;
+	unsigned int boosted_val = vol_boost != 0 ? 
+									default_val + vol_boost : default_val;
+
+	pr_info("Sound Control: Headset default value %d\n", default_val);
+	
+	tabla_write(soundcontrol.sound_control_codec, 
+				TABLA_A_RX_HPH_L_GAIN, boosted_val);
+	tabla_write(soundcontrol.sound_control_codec, 
+				TABLA_A_RX_HPH_R_GAIN, boosted_val);
+	
+	pr_info("Sound Control: Boosted Headset L value %d\n", 
+			tabla_read(soundcontrol.sound_control_codec, 
+						TABLA_A_RX_HPH_L_GAIN));
+	pr_info("Sound Control: Boosted Headset R value %d\n", 
+			tabla_read(soundcontrol.sound_control_codec, 
+						TABLA_A_RX_HPH_R_GAIN));
+}
 #endif
 
 static int tabla_codec_probe(struct snd_soc_codec *codec)
@@ -8416,6 +8466,7 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	pr_info("tabla codec probe...\n");
 	fauxsound_codec_ptr = codec;
 #endif
+	soundcontrol.sound_control_codec = codec;  
 
 	codec->control_data = dev_get_drvdata(codec->dev->parent);
 	control = codec->control_data;
