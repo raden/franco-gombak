@@ -38,15 +38,6 @@
 #include <linux/suspend.h>
 #include "wcd9310.h"
 
-static struct sound_control {
-	unsigned int default_headset_val;
-	unsigned int default_headphones_val;
-	unsigned int default_mic_gain_val;
-	struct snd_soc_codec *sound_control_codec;
-	bool lock;
-} soundcontrol = {
-	.lock = false,
-};
 static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
@@ -1066,7 +1057,7 @@ static const struct soc_enum cf_rxmix6_enum =
 static const struct soc_enum cf_rxmix7_enum =
 	SOC_ENUM_SINGLE(TABLA_A_CDC_RX7_B4_CTL, 1, 3, cf_text);
 
-static struct snd_kcontrol_new tabla_snd_controls[] = {
+static const struct snd_kcontrol_new tabla_snd_controls[] = {
 
 	SOC_ENUM_EXT("EAR PA Gain", tabla_ear_pa_gain_enum[0],
 		tabla_pa_gain_get, tabla_pa_gain_put),
@@ -2827,6 +2818,7 @@ static int tabla_codec_enable_dec(struct snd_soc_dapm_widget *w,
 				  snd_soc_read(codec,
 				  tx_digital_gain_reg[w->shift + offset])
 				  );
+
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
@@ -8649,14 +8641,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	}
 #endif
 	codec->ignore_pmdown_time = 1;
-
-	/*
-	 * Get the defaults using the tabla helper read reg function
-	 */
-	soundcontrol.default_headset_val = tabla_read(codec, TABLA_A_RX_HPH_L_GAIN);
-	soundcontrol.default_headphones_val = tabla_read(codec, 
-												TABLA_A_CDC_RX1_VOL_CTL_B2_CTL);
-
 	return ret;
 
 err_hphr_ocp_irq:
