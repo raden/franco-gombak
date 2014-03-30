@@ -8409,6 +8409,7 @@ struct snd_kcontrol_new *gpl_faux_snd_controls_ptr =
 		(struct snd_kcontrol_new *)tabla_snd_controls;
 struct snd_soc_codec *fauxsound_codec_ptr;
 EXPORT_SYMBOL(fauxsound_codec_ptr);
+#endif
 #ifdef CONFIG_SOUND_CONTROL
 void update_headphones_volume_boost(int vol_boost)
 {
