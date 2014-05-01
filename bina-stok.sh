@@ -15,7 +15,7 @@ export KBUILD_BUILD_HOST="ampang"
 #echo "Copy backup config..."
 #cp najmi-mako-config .config
 #make cyanogen_mako_defconfig
-make hells_defconfig
+#make hells_defconfig
 #make menuconfig
 #echo "Begin compile..."
 #make -j8
